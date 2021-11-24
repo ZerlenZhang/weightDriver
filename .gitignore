@@ -1,0 +1,13 @@
+# Rider
+.idea/
+
+# Visual Studio
+.vs/
+*.aps
+
+# Common Artifacts
+**/bin/
+**/obj/
+
+*.pdb
+*.exp
