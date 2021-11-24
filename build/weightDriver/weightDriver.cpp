@@ -119,600 +119,15 @@ MObject weightDriver::exposeData;
 weightDriver::weightDriver()
 {}
 
+
 weightDriver::~weightDriver()
 {}
-
-void* weightDriver::creator()
-{
-    return new weightDriver();
-}
-
-bool weightDriver::isBounded() const
-{
-    return false;
-}
-
-// ---------------------------------------------------------------------
-// initialize the attributes
-// ---------------------------------------------------------------------
-
-MStatus weightDriver::initialize()
-{
-    //
-    // MFnEnumAttribute
-    //
-
-    MFnEnumAttribute eAttr;
-
-    direction = eAttr.create("direction", "dir", 0);
-    eAttr.addField("X", 0);
-    eAttr.addField("Y", 1);
-    eAttr.addField("Z", 2);
-    eAttr.setKeyable(true);
-
-    distanceType = eAttr.create("distanceType", "dist", 0);
-    eAttr.addField("Euclidean", 0);
-    eAttr.addField("Angle", 1);
-    eAttr.setKeyable(true);
-
-    interpolate = eAttr.create("interpolation", "int", 0);
-    eAttr.addField("Linear", 0);
-    eAttr.addField("Slow", 1);
-    eAttr.addField("Fast", 2);
-    eAttr.addField("Smooth1", 3);
-    eAttr.addField("Smooth2", 4);
-    eAttr.addField("Curve", 5);
-    eAttr.setKeyable(true);
-
-    kernel = eAttr.create("kernel", "kn", 0);
-    eAttr.addField("Gaussian", 0);
-    eAttr.addField("Linear", 1);
-    // Set the attribute to be hidden and non-keyable because the
-    // evaluation needs to get updated when switching the kernel type.
-    // The automatic update is tied to the control in the attribute
-    // editor. But since the channel box doesn't allow for such a
-    // command execution the attribute is hidden from the channel box
-    // to force the editing through the attribute editor.
-    eAttr.setKeyable(false);
-    eAttr.setHidden(true);
-
-    poseMode = eAttr.create("poseMode", "pmd", 0);
-    eAttr.addField("Rotate/Twist", 0);
-    eAttr.addField("Rotate", 1);
-    eAttr.addField("Twist", 2);
-
-    poseRotateOrder = eAttr.create("controlPoseRotateOrder", "cpro", 0);
-    eAttr.addField("xyz", 0);
-    eAttr.addField("yzx", 1);
-    eAttr.addField("zxy", 2);
-    eAttr.addField("xzy", 3);
-    eAttr.addField("yxz", 4);
-    eAttr.addField("zyx", 5);
-
-    rbfMode = eAttr.create("rbfMode", "rbfm", 0);
-    eAttr.addField("Generic", 0);
-    eAttr.addField("Matrix", 1);
-    eAttr.setKeyable(false);
-    eAttr.setHidden(true);
-
-    twistAxis = eAttr.create("twistAxis", "tax", 0);
-    eAttr.addField("X", 0);
-    eAttr.addField("Y", 1);
-    eAttr.addField("Z", 2);
-    eAttr.setKeyable(false);
-
-    type = eAttr.create("type", "typ", 0);
-    eAttr.addField("Vector Angle", 0);
-    eAttr.addField("RBF", 1);
-    eAttr.setKeyable(true);
-
-    //
-    // MFnNumericAttribute
-    //
-
-    MFnNumericAttribute nAttr;
-
-    active = nAttr.create("active", "ac", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    allowNegative = nAttr.create("allowNegativeWeights", "anw", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    angle = nAttr.create("angle", "an", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.01);
-    nAttr.setMax(180.0);
-    nAttr.setDefault(45.0);
-
-    bias = nAttr.create("bias", "bias", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(0.0);
-    nAttr.setSoftMin(-1.0);
-    nAttr.setSoftMax(1.0);
-
-    centerAngle = nAttr.create("centerAngle", "ca", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setMax(180.0);
-    nAttr.setDefault(0.0);
-
-    colorDriverR = nAttr.create("driverColorR", "dcr", MFnNumericData::kDouble);
-    nAttr.setKeyable(false);
-    nAttr.setMin(0.0);
-    nAttr.setMax(1.0);
-    nAttr.setDefault(0.1);
-
-    colorDriverG = nAttr.create("driverColorG", "dcg", MFnNumericData::kDouble);
-    nAttr.setKeyable(false);
-    nAttr.setMin(0.0);
-    nAttr.setMax(1.0);
-    nAttr.setDefault(0.7);
-
-    colorDriverB = nAttr.create("driverColorB", "dcb", MFnNumericData::kDouble);
-    nAttr.setKeyable(false);
-    nAttr.setMin(0.0);
-    nAttr.setMax(1.0);
-    nAttr.setDefault(0.0);
-
-    colorR = nAttr.create("iconColorR", "icr", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setMax(1.0);
-    nAttr.setDefault(1.0);
-
-    colorG = nAttr.create("iconColorG", "icg", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setMax(1.0);
-    nAttr.setDefault(0.8);
-
-    colorB = nAttr.create("iconColorB", "icb", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setMax(1.0);
-    nAttr.setDefault(0.2);
-
-    drawCenter = nAttr.create("drawCenterCone", "dcc", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(false);
-
-    drawCone = nAttr.create("drawCone", "dc", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    drawDriver = nAttr.create("drawDriver", "dd", MFnNumericData::kBoolean);
-    nAttr.setKeyable(false);
-    nAttr.setHidden(true);
-    nAttr.setDefault(false);
-
-    drawIndices = nAttr.create("drawIndices", "did", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    drawOrigin = nAttr.create("drawOrigin", "dor", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    drawPoses = nAttr.create("drawPoses", "dp", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    drawTwist = nAttr.create("drawTwist", "dt", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(false);
-
-    drawWeight = nAttr.create("drawWeight", "dw", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    driverIndex = nAttr.create("driverIndex", "dvi", MFnNumericData::kInt);
-    nAttr.setKeyable(false);
-    nAttr.setHidden(true);
-    nAttr.setDefault(0);
-
-    evaluate = nAttr.create("evaluate", "e", MFnNumericData::kBoolean);
-    nAttr.setKeyable(false);
-    nAttr.setHidden(true);
-    nAttr.setDefault(false);
-
-    exposeData = nAttr.create("exposeData", "exd", MFnNumericData::kInt);
-    nAttr.setKeyable(true);
-    nAttr.setHidden(true);
-    nAttr.setDefault(0);
-
-    grow = nAttr.create("grow", "gr", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    indexDist = nAttr.create("indexDistance", "idd", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setDefault(0.1);
-
-    input = nAttr.create("input", "i", MFnNumericData::kDouble);
-    nAttr.setWritable(true);
-    nAttr.setKeyable(true);
-    nAttr.setArray(true);
-    nAttr.setUsesArrayDataBuilder(true);
-
-    invert = nAttr.create("invert", "iv", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(false);
-
-    opposite = nAttr.create("opposite", "op", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(false);
-
-    output = nAttr.create("output", "o", MFnNumericData::kDouble);
-    nAttr.setWritable(true);
-    nAttr.setArray(true);
-    nAttr.setUsesArrayDataBuilder(true);
-
-    outWeight = nAttr.create("outWeight", "ow", MFnNumericData::kDouble);
-    nAttr.setWritable(true);
-    nAttr.setKeyable(false);
-    nAttr.setDefault(0.0);
-
-    poseDrawTwist = nAttr.create("poseDrawTwist", "pdt", MFnNumericData::kDouble);
-    nAttr.setWritable(false);
-    nAttr.setStorable(false);
-    nAttr.setHidden(true);
-    nAttr.setArray(true);
-    nAttr.setUsesArrayDataBuilder(true);
-
-    poseDrawVector = nAttr.create("poseDrawVector", "pdv", MFnNumericData::k3Double);
-    nAttr.setWritable(false);
-    nAttr.setStorable(false);
-    nAttr.setHidden(true);
-    nAttr.setArray(true);
-    nAttr.setUsesArrayDataBuilder(true);
-
-    poseInput = nAttr.create("poseInput", "pi", MFnNumericData::kDouble);
-    nAttr.setWritable(true);
-    nAttr.setKeyable(true);
-    nAttr.setArray(true);
-    nAttr.setUsesArrayDataBuilder(true);
-
-    poseLength = nAttr.create("poseLength", "pl", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setDefault(1.0);
-
-    poseValue = nAttr.create("poseValue", "pv", MFnNumericData::kDouble);
-    nAttr.setWritable(true);
-    nAttr.setKeyable(true);
-    nAttr.setArray(true);
-    nAttr.setUsesArrayDataBuilder(true);
-
-    restInput = nAttr.create("restInput", "rin", MFnNumericData::kDouble);
-    nAttr.setWritable(true);
-    nAttr.setKeyable(true);
-    nAttr.setArray(true);
-    nAttr.setUsesArrayDataBuilder(true);
-
-    scale = nAttr.create("scale", "sc", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(1.0);
-
-    size = nAttr.create("iconSize", "is", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setSoftMax(50.0);
-    nAttr.setDefault(1.0);
-
-    translateMax = nAttr.create("translateMax", "tmax", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setDefault(0.0);
-
-    translateMin = nAttr.create("translateMin", "tmin", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.0);
-    nAttr.setDefault(0.0);
-
-    twist = nAttr.create("twist", "tw", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(false);
-
-    twistAngle = nAttr.create("twistAngle", "ta", MFnNumericData::kDouble);
-    nAttr.setKeyable(true);
-    nAttr.setMin(0.01);
-    nAttr.setMax(180.0);
-    nAttr.setDefault(90.0);
-
-    useInterpolation = nAttr.create("useInterpolation", "uint", MFnNumericData::kBoolean);
-    nAttr.setKeyable(false);
-    nAttr.setHidden(true);
-
-    useRotate = nAttr.create("useRotate", "ur", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(true);
-
-    useTranslate = nAttr.create("useTranslate", "ut", MFnNumericData::kBoolean);
-    nAttr.setKeyable(true);
-    nAttr.setDefault(false);
-
-    //
-    // MFnMessageAttribute
-    //
-
-    MFnMessageAttribute msgAttr;
-
-    controlNode = msgAttr.create("controlNode", "cn");
-
-    //
-    // MFnMatrixAttribute
-    //
-
-    MFnMatrixAttribute mAttr;
-
-    driverInput = mAttr.create("driverInput", "di");
-    mAttr.setHidden(true);
-    driverMatrix = mAttr.create("driverMatrix", "dm");
-    mAttr.setHidden(true);
-    poseMatrix = mAttr.create("poseMatrix", "pmat");
-    mAttr.setHidden(true);
-    poseParentMatrix = mAttr.create("poseParentMatrix", "ppmat");
-    mAttr.setHidden(true);
-    readerMatrix = mAttr.create("readerMatrix", "rm");
-    mAttr.setHidden(true);
-
-    //
-    // MFnTypedAttribute
-    //
-
-    MFnTypedAttribute tAttr;
-
-    poseAttributes = tAttr.create("controlPoseAttributes", "cpa", MFnData::kStringArray);
-    poseValues = tAttr.create("controlPoseValues", "cpv", MFnData::kDoubleArray);
-
-    //
-    // MFnCompoundAttribute
-    //
-
-    MFnCompoundAttribute cAttr;
-
-    color = cAttr.create("iconColor", "ic");
-    cAttr.setKeyable(true);
-    cAttr.addChild(colorR);
-    cAttr.addChild(colorG);
-    cAttr.addChild(colorB);
-
-    colorDriver = cAttr.create("driverColor", "dco");
-    cAttr.setKeyable(false);
-    cAttr.setHidden(true);
-    cAttr.addChild(colorDriverR);
-    cAttr.addChild(colorDriverG);
-    cAttr.addChild(colorDriverB);
-
-    pose = cAttr.create("pose", "p");
-    cAttr.setArray(true);
-    cAttr.setUsesArrayDataBuilder(true);
-    cAttr.addChild(poseMatrix);
-    cAttr.addChild(poseParentMatrix);
-    cAttr.addChild(poseMode);
-    cAttr.addChild(poseAttributes);
-    cAttr.addChild(poseValues);
-    cAttr.addChild(poseRotateOrder);
-
-    driverList = cAttr.create("driverList", "dl");
-    cAttr.setHidden(true);
-    cAttr.setArray(true);
-    cAttr.setUsesArrayDataBuilder(true);
-    cAttr.addChild(driverInput);
-    cAttr.addChild(controlNode);
-    cAttr.addChild(pose);
-
-    poses = cAttr.create("poses", "ps");
-    cAttr.setKeyable(true);
-    cAttr.setArray(true);
-    cAttr.setUsesArrayDataBuilder(true);
-    cAttr.addChild(poseInput);
-    cAttr.addChild(poseValue);
-
-    //
-    // MRampAttribute
-    //
-
-    MRampAttribute rAttr;
-
-    curveRamp = rAttr.createCurveRamp("blendCurve", "bc");
-
-    // -----------------------------------------------------------------
-    // add attributes (order matters)
-    // -----------------------------------------------------------------
-
-    addAttribute(active);
-    addAttribute(type);
-    addAttribute(direction);
-    addAttribute(invert);
-    addAttribute(useRotate);
-    addAttribute(angle);
-    addAttribute(centerAngle);
-    addAttribute(twist);
-    addAttribute(twistAngle);
-    addAttribute(useTranslate);
-    addAttribute(grow);
-    addAttribute(translateMin);
-    addAttribute(translateMax);
-    addAttribute(interpolate);
-    addAttribute(curveRamp);
-    addAttribute(size);
-    addAttribute(color);
-    addAttribute(drawCone);
-    addAttribute(drawCenter);
-    addAttribute(drawWeight);
-    addAttribute(outWeight);
-    addAttribute(readerMatrix);
-    addAttribute(driverMatrix);
-    addAttribute(driverList);
-    addAttribute(driverInput);
-    addAttribute(pose);
-    addAttribute(poseMatrix);
-    addAttribute(poseParentMatrix);
-    addAttribute(input);
-    addAttribute(restInput);
-    addAttribute(poses);
-    addAttribute(poseInput);
-    addAttribute(poseValue);
-    addAttribute(output);
-    addAttribute(poseMode);
-    addAttribute(twistAxis);
-    addAttribute(opposite);
-    addAttribute(poseAttributes);
-    addAttribute(poseValues);
-    addAttribute(poseRotateOrder);
-    addAttribute(rbfMode);
-    addAttribute(evaluate);
-    addAttribute(kernel);
-    addAttribute(bias);
-    addAttribute(useInterpolation);
-    addAttribute(allowNegative);
-    addAttribute(scale);
-    addAttribute(distanceType);
-    addAttribute(drawOrigin);
-    addAttribute(drawDriver);
-    addAttribute(drawPoses);
-    addAttribute(drawIndices);
-    addAttribute(drawTwist);
-    addAttribute(poseLength);
-    addAttribute(indexDist);
-    addAttribute(driverIndex);
-    addAttribute(colorDriver);
-    addAttribute(controlNode);
-    addAttribute(poseDrawVector);
-    addAttribute(poseDrawTwist);
-    addAttribute(exposeData);
-
-    // -----------------------------------------------------------------
-    // affects
-    // -----------------------------------------------------------------
-
-    attributeAffects(weightDriver::active, weightDriver::output);
-    attributeAffects(weightDriver::allowNegative, weightDriver::output);
-    attributeAffects(weightDriver::angle, weightDriver::output);
-    attributeAffects(weightDriver::bias, weightDriver::output);
-    attributeAffects(weightDriver::centerAngle, weightDriver::output);
-    attributeAffects(weightDriver::curveRamp, weightDriver::output);
-    attributeAffects(weightDriver::direction, weightDriver::output);
-    attributeAffects(weightDriver::distanceType, weightDriver::output);
-    attributeAffects(weightDriver::driverIndex, weightDriver::output);
-    attributeAffects(weightDriver::driverInput, weightDriver::output);
-    attributeAffects(weightDriver::driverMatrix, weightDriver::output);
-    attributeAffects(weightDriver::evaluate, weightDriver::output);
-    attributeAffects(weightDriver::grow, weightDriver::output);
-    attributeAffects(weightDriver::input, weightDriver::output);
-    attributeAffects(weightDriver::interpolate, weightDriver::output);
-    attributeAffects(weightDriver::invert, weightDriver::output);
-    attributeAffects(weightDriver::kernel, weightDriver::output);
-    attributeAffects(weightDriver::opposite, weightDriver::output);
-    attributeAffects(weightDriver::poseInput, weightDriver::output);
-    attributeAffects(weightDriver::poseMatrix, weightDriver::output);
-    attributeAffects(weightDriver::poseMode, weightDriver::output);
-    attributeAffects(weightDriver::poseParentMatrix, weightDriver::output);
-    attributeAffects(weightDriver::poseValue, weightDriver::output);
-    attributeAffects(weightDriver::scale, weightDriver::output);
-    attributeAffects(weightDriver::rbfMode, weightDriver::output);
-    attributeAffects(weightDriver::readerMatrix, weightDriver::output);
-    attributeAffects(weightDriver::restInput, weightDriver::output);
-    attributeAffects(weightDriver::translateMax, weightDriver::output);
-    attributeAffects(weightDriver::translateMin, weightDriver::output);
-    attributeAffects(weightDriver::twist, weightDriver::output);
-    attributeAffects(weightDriver::twistAngle, weightDriver::output);
-    attributeAffects(weightDriver::twistAxis, weightDriver::output);
-    attributeAffects(weightDriver::type, weightDriver::output);
-    attributeAffects(weightDriver::useInterpolation, weightDriver::output);
-    attributeAffects(weightDriver::useRotate, weightDriver::output);
-    attributeAffects(weightDriver::useTranslate, weightDriver::output);
-
-    // -----------------------------------------------------------------
-    // affects also the legacy outWeight plug
-    // (to not break compatibility)
-    // -----------------------------------------------------------------
-    attributeAffects(weightDriver::active, weightDriver::outWeight);
-    attributeAffects(weightDriver::angle, weightDriver::outWeight);
-    attributeAffects(weightDriver::centerAngle, weightDriver::outWeight);
-    attributeAffects(weightDriver::curveRamp, weightDriver::outWeight);
-    attributeAffects(weightDriver::direction, weightDriver::outWeight);
-    attributeAffects(weightDriver::driverMatrix, weightDriver::outWeight);
-    attributeAffects(weightDriver::interpolate, weightDriver::outWeight);
-    attributeAffects(weightDriver::invert, weightDriver::outWeight);
-    attributeAffects(weightDriver::grow, weightDriver::outWeight);
-    attributeAffects(weightDriver::readerMatrix, weightDriver::outWeight);
-    attributeAffects(weightDriver::translateMax, weightDriver::outWeight);
-    attributeAffects(weightDriver::translateMin, weightDriver::outWeight);
-    attributeAffects(weightDriver::twist, weightDriver::outWeight);
-    attributeAffects(weightDriver::twistAngle, weightDriver::outWeight);
-    attributeAffects(weightDriver::type, weightDriver::outWeight);
-    attributeAffects(weightDriver::useRotate, weightDriver::outWeight);
-    attributeAffects(weightDriver::useTranslate, weightDriver::outWeight);
-
-    return MStatus::kSuccess;
-}
-
-
-void weightDriver::postConstructor()
-{
-    MObject thisNode = this->thisMObject();
-    MFnDependencyNode nodeFn(thisNode);
-    nodeFn.setName("weightDriverShape#");
-
-    // initialize the curve ramp
-    postConstructor_init_curveRamp(thisNode, curveRamp, 0, 0.0f, 0.0f, 3);
-    postConstructor_init_curveRamp(thisNode, curveRamp, 1, 1.0f, 1.0f, 3);
-
-    // -----------------------------------------------------------------
-    // hide the default attributes
-    // -----------------------------------------------------------------
-
-    MPlug attrPlug(thisNode, weightDriver::localPositionX);
-    attrPlug.setChannelBox(false);
-    attrPlug.setAttribute(weightDriver::localPositionY);
-    attrPlug.setChannelBox(false);
-    attrPlug.setAttribute(weightDriver::localPositionZ);
-    attrPlug.setChannelBox(false);
-    attrPlug.setAttribute(weightDriver::localScaleX);
-    attrPlug.setChannelBox(false);
-    attrPlug.setAttribute(weightDriver::localScaleY);
-    attrPlug.setChannelBox(false);
-    attrPlug.setAttribute(weightDriver::localScaleZ);
-    attrPlug.setChannelBox(false);
-}
-
-
-MStatus weightDriver::postConstructor_init_curveRamp(MObject &nodeObj,
-                                                     MObject &rampObj,
-                                                     int index,
-                                                     float position,
-                                                     float value,
-                                                     int interpolation)
-{
-    MStatus status;
-
-    MPlug rampPlug(nodeObj, rampObj);
-    MPlug elementPlug = rampPlug.elementByLogicalIndex((unsigned)index, &status);
-    CHECK_MSTATUS_AND_RETURN_IT(status);
-    MPlug positionPlug = elementPlug.child(0, &status);
-    CHECK_MSTATUS_AND_RETURN_IT(status);
-    status = positionPlug.setFloat(position);
-    CHECK_MSTATUS_AND_RETURN_IT(status);
-    MPlug valuePlug = elementPlug.child(1);
-    status = valuePlug.setFloat(value);
-    CHECK_MSTATUS_AND_RETURN_IT(status);
-    MPlug interpolationPlug = elementPlug.child(2);
-    interpolationPlug.setInt(interpolation);
-
-    return status;
-}
 
 
 // ---------------------------------------------------------------------
 // compute function
 // ---------------------------------------------------------------------
-
-MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
+MStatus weightDriver::compute(const MPlug& plug, MDataBlock& data)
 {
     MStatus status = MStatus::kSuccess;
 
@@ -889,7 +304,7 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
                 else
                 {
                     translateVal = 1 - ((distance - translateMinVal)
-                                   / (translateMaxVal - translateMinVal));
+                        / (translateMaxVal - translateMinVal));
                 }
 
                 if (growVal)
@@ -997,12 +412,12 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
                 driver.resize(driverSize);
 
                 status = getPoseData(data,
-                                     driver,
-                                     poseCount,
-                                     solveCount,
-                                     matPoses,
-                                     matValues,
-                                     poseModes);
+                    driver,
+                    poseCount,
+                    solveCount,
+                    matPoses,
+                    matValues,
+                    poseModes);
                 CHECK_MSTATUS_AND_RETURN_IT(status);
             }
             else
@@ -1017,14 +432,14 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
                 driver.resize(4 * driverCount);
 
                 status = getPoseVectors(data,
-                                        driver,
-                                        poseCount,
-                                        matPoses,
-                                        matValues,
-                                        poseModes,
-                                        (unsigned)twistAxisVal,
-                                        oppositeVal,
-                                        (unsigned)driverIndexVal);
+                    driver,
+                    poseCount,
+                    matPoses,
+                    matValues,
+                    poseModes,
+                    (unsigned)twistAxisVal,
+                    oppositeVal,
+                    (unsigned)driverIndexVal);
                 CHECK_MSTATUS_AND_RETURN_IT(status);
 
                 // Override the distance type for the matrix mode to
@@ -1050,7 +465,7 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
             {
                 // Set the default values for the output.
                 weightsArray.setLength(solveCount);
-                for (i = 0; i < solveCount; i ++)
+                for (i = 0; i < solveCount; i++)
                     weightsArray.set(0.0, i);
 
                 if (evalInput)
@@ -1091,7 +506,7 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
                     // solve for each dimension
                     // -------------------------------------------------
 
-                    for (c = 0; c < solveCount; c ++)
+                    for (c = 0; c < solveCount; c++)
                     {
                         // Get the pose values for each dimension.
                         std::vector<double> y;
@@ -1102,7 +517,7 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
                         // modified during the solving process.
                         BRMatrix solveMat = linMat;
 
-                        double* w = new double [poseCount];
+                        double* w = new double[poseCount];
                         bool solved = solveMat.solve(y, w);
                         if (!solved)
                         {
@@ -1111,10 +526,10 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
                         }
 
                         // Store the weights in the weight matrix.
-                        for (i = 0; i < poseCount; i ++)
+                        for (i = 0; i < poseCount; i++)
                             wMat(i, c) = w[i];
 
-                        delete [] w;
+                        delete[] w;
                     }
 
                     if (exposeDataVal > 2)
@@ -1126,13 +541,13 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
                 // -----------------------------------------------
 
                 getPoseWeights(weightsArray,
-                               matPoses,
-                               driver,
-                               poseModes,
-                               wMat,
-                               meanDist,
-                               distanceTypeVal,
-                               kernelVal);
+                    matPoses,
+                    driver,
+                    poseModes,
+                    wMat,
+                    meanDist,
+                    distanceTypeVal,
+                    kernelVal);
 
                 if (exposeDataVal == 2 || exposeDataVal == 4)
                     showArray(weightsArray, thisName + " : RBF Weights");
@@ -1141,7 +556,7 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
                 // define the final values
                 // -----------------------------------------------
 
-                for (i = 0; i < weightsArray.length(); i ++)
+                for (i = 0; i < weightsArray.length(); i++)
                 {
                     double value = weightsArray[i];
 
@@ -1183,6 +598,67 @@ MStatus weightDriver::compute(const MPlug &plug, MDataBlock &data)
     }
 
     return MStatus::kSuccess;
+}
+
+
+bool weightDriver::isBounded() const
+{
+    return false;
+}
+
+
+void weightDriver::postConstructor()
+{
+    MObject thisNode = this->thisMObject();
+    MFnDependencyNode nodeFn(thisNode);
+    nodeFn.setName("weightDriverShape#");
+
+    // initialize the curve ramp
+    postConstructor_init_curveRamp(thisNode, curveRamp, 0, 0.0f, 0.0f, 3);
+    postConstructor_init_curveRamp(thisNode, curveRamp, 1, 1.0f, 1.0f, 3);
+
+    // -----------------------------------------------------------------
+    // hide the default attributes
+    // -----------------------------------------------------------------
+
+    MPlug attrPlug(thisNode, weightDriver::localPositionX);
+    attrPlug.setChannelBox(false);
+    attrPlug.setAttribute(weightDriver::localPositionY);
+    attrPlug.setChannelBox(false);
+    attrPlug.setAttribute(weightDriver::localPositionZ);
+    attrPlug.setChannelBox(false);
+    attrPlug.setAttribute(weightDriver::localScaleX);
+    attrPlug.setChannelBox(false);
+    attrPlug.setAttribute(weightDriver::localScaleY);
+    attrPlug.setChannelBox(false);
+    attrPlug.setAttribute(weightDriver::localScaleZ);
+    attrPlug.setChannelBox(false);
+}
+
+
+MStatus weightDriver::postConstructor_init_curveRamp(MObject &nodeObj,
+                                                     MObject &rampObj,
+                                                     int index,
+                                                     float position,
+                                                     float value,
+                                                     int interpolation)
+{
+    MStatus status;
+
+    MPlug rampPlug(nodeObj, rampObj);
+    MPlug elementPlug = rampPlug.elementByLogicalIndex((unsigned)index, &status);
+    CHECK_MSTATUS_AND_RETURN_IT(status);
+    MPlug positionPlug = elementPlug.child(0, &status);
+    CHECK_MSTATUS_AND_RETURN_IT(status);
+    status = positionPlug.setFloat(position);
+    CHECK_MSTATUS_AND_RETURN_IT(status);
+    MPlug valuePlug = elementPlug.child(1);
+    status = valuePlug.setFloat(value);
+    CHECK_MSTATUS_AND_RETURN_IT(status);
+    MPlug interpolationPlug = elementPlug.child(2);
+    interpolationPlug.setInt(interpolation);
+
+    return status;
 }
 
 
@@ -1776,266 +1252,6 @@ MStatus weightDriver::getPoseData(MDataBlock &data,
 
 //
 // Description:
-//      Calculate the twist angle based on the given rotate order.
-//
-// Input Arguments:
-//      q               The quaternion to get the twist angle from.
-//      axis            The twist axis.
-//
-// Return Value:
-//      double          The twist angle.
-//
-double weightDriver::getTwistAngle(MQuaternion q, unsigned int axis)
-{
-    double axisComponent = q.x;
-    if (axis == 1)
-        axisComponent = q.y;
-    else if (axis == 2)
-        axisComponent = q.z;
-    return 2.0 * atan2(axisComponent, q.w);
-}
-
-
-//
-// Description:
-//      Build a matrix containing the distance values between all poses.
-//      Based on all distances also calculate the general mean distance
-//      which is needed for the RBF calculation.
-//
-// Input Arguments:
-//      poseMat         The matrix containing all poses.
-//      meanDist        The average distance between the poses.
-//      distType        The distance type (linear/angle).
-//
-// Return Value:
-//      BRMatrix        The twist angle.
-//
-BRMatrix weightDriver::getDistances(BRMatrix poseMat, double &meanDist, int distType)
-{
-    unsigned count = poseMat.getRowSize();
-
-    unsigned int i, j;
-
-    BRMatrix distMat;
-    distMat.setSize(count, count);
-
-    double sum = 0.0;
-
-    for (i = 0; i < count; i ++)
-    {
-        for (j = 0; j < count; j ++)
-        {
-            double dist = getPoseDelta(poseMat.getRowVector(i), poseMat.getRowVector(j), distType);
-            distMat(i, j) = dist;
-            sum += dist;
-        }
-    }
-
-    meanDist = sum / (count * count);
-
-    return distMat;
-}
-
-
-//
-// Description:
-//      Return the distance between the two given vectors based on the
-//      distance type (linear/angle) or the vector components in case
-//      of the generic RBF mode.
-//
-// Input Arguments:
-//      vec1            The first vector.
-//      vec2            The second vector.
-//      distType        The distance type (linear/angle).
-//
-// Return Value:
-//      double          The distance value.
-//
-double weightDriver::getPoseDelta(std::vector<double> vec1, std::vector<double> vec2, int distType)
-{
-    double dist = 0.0;
-    if (distType == 0)
-        dist = getRadius(vec1, vec2);
-    else
-    {
-        if (vec1.size() == 3 && vec2.size() == 3)
-            dist = getAngle(vec1, vec2);
-        else
-            dist = getRadius(vec1, vec2);
-    }
-    return dist;
-}
-
-
-//
-// Description:
-//      Calculate the linear distance between two vectors.
-//
-// Input Arguments:
-//      vec1            The first vector.
-//      vec2            The second vector.
-//
-// Return Value:
-//      double          The linear distance.
-//
-double weightDriver::getRadius(std::vector<double> vec1, std::vector<double> vec2)
-{
-    size_t count = vec1.size();
-
-    double sum = 0.0;
-    for (unsigned i = 0; i < count; i ++)
-        sum += pow(vec1[i] - vec2[i], 2);
-    return sqrt(sum);
-}
-
-
-//
-// Description:
-//      Calculate the angle between two vectors.
-//
-// Input Arguments:
-//      vec1            The first vector.
-//      vec2            The second vector.
-//
-// Return Value:
-//      double          The angle value.
-//
-double weightDriver::getAngle(std::vector<double> vec1, std::vector<double> vec2)
-{
-    MVector v1(vec1[0], vec1[1], vec1[2]);
-    MVector v2(vec2[0], vec2[1], vec2[2]);
-    return v1.angle(v2);
-}
-
-
-//
-// Description:
-//      Calculate the RBF activation values.
-//
-// Input Arguments:
-//      mat             The matrix with the activation values.
-//      width           The activation width.
-//      kernelType      The interpolation function.
-//
-// Return Value:
-//      None
-//
-void weightDriver::getActivations(BRMatrix &mat, double width, short kernelType)
-{
-    unsigned count = mat.getRowSize();
-
-    unsigned int i, j;
-
-    for (i = 0; i < count; i ++)
-    {
-        for (j = 0; j < count; j ++)
-            mat(i, j) = interpolateRbf(mat(i, j), width, kernelType);
-    }
-}
-
-
-//
-// Description:
-//      Interpolation function for processing the weight values.
-//
-// Input Arguments:
-//      value           The value to interpolate.
-//      width           The activation width.
-//      kernelType      The interpolation function.
-//
-// Return Value:
-//      double          The new interpolated value.
-//
-double weightDriver::interpolateRbf(double value, double width, short kernelType)
-{
-    double result = 0.0;
-
-    // gaussian
-    if (kernelType == 0)
-    {
-        if (width == 0.0)
-            width = 1.0;
-        width = 1.0 / width;
-        double sigma = -(width * width);
-        result = exp(sigma * value);
-    }
-    // linear
-    else if (kernelType == 1)
-    {
-        result = value;
-    }
-
-    return result;
-}
-
-
-//
-// Description:
-//      Calculate the individual output weights based on the current
-//      driver values in relation to the stored poses. This is the main
-//      part of the RBF calculation but a rather simple process as it
-//      just gets the distances of the driver to the stored poses and
-//      calculates the weighted output values based on the weight matrix
-//      built during initialization.
-//
-// Input Arguments:
-//      out             The array of output weight values.
-//      poses           The matrix containing all poses.
-//      driver          The array of driver values.
-//      poseModes       The array containing the the mode per pose.
-//      weightMat       The matrix with the RBF weights.
-//      avgDist         The average distance between the poses.
-//      distType        The distance type (linear/angle).
-//      kernelType      The interpolation function.
-//
-// Return Value:
-//      None
-//
-void weightDriver::getPoseWeights(MDoubleArray &out,
-                                  BRMatrix poses,
-                                  std::vector<double> driver,
-                                  MIntArray poseModes,
-                                  BRMatrix weightMat,
-                                  double avgDist,
-                                  int distType,
-                                  short kernelType)
-{
-    unsigned int poseCount = poses.getRowSize();
-    unsigned int valueCount = out.length();
-
-    // Make sure that the weight matrix has the correct dimensions.
-    // This has become necessary with introducing multiple drivers in
-    // matrix mode.
-    if (weightMat.getRowSize() != poseCount || weightMat.getColSize() != valueCount)
-        return;
-
-    unsigned int i, j;
-
-    for (i = 0; i < poseCount; i ++)
-    {
-        double dist = 0.0;
-        std::vector<double> dv = driver;
-        std::vector<double> ps = poses.getRowVector(i);
-
-        if (poseModes[i] == 1)
-            dv[3] = 0.0;
-        else if (poseModes[i] == 2)
-        {
-            dv[0] = 0.0;
-            dv[1] = 0.0;
-            dv[2] = 0.0;
-        }
-
-        dist = getPoseDelta(dv, ps, distType);
-
-        for (j = 0; j < valueCount; j ++)
-            out[j] += weightMat(i, j) * interpolateRbf(dist, avgDist, kernelType);
-    }
-}
-
-
-//
-// Description:
 //      Pass the weight values to the outputs.
 //
 // Input Arguments:
@@ -2229,7 +1445,6 @@ void weightDriver::showMatrix(MMatrix mat, MString name)
 // This applies to the vector angle reader and RBF solver.
 //
 // ---------------------------------------------------------------------
-
 void weightDriver::draw(M3dView &view,
                         const MDagPath &path,
                         M3dView::DisplayStyle style,
@@ -2705,20 +1920,799 @@ void weightDriver::draw(M3dView &view,
 }
 
 
-// ---------------------------------------------------------------------
+#pragma region Static
+
+void* weightDriver::creator()
+{
+    return new weightDriver();
+}
+
+
+MStatus weightDriver::initialize()
+{
+    //
+    // MFnEnumAttribute
+    //
+
+    MFnEnumAttribute eAttr;
+
+    direction = eAttr.create("direction", "dir", 0);
+    eAttr.addField("X", 0);
+    eAttr.addField("Y", 1);
+    eAttr.addField("Z", 2);
+    eAttr.setKeyable(true);
+
+    distanceType = eAttr.create("distanceType", "dist", 0);
+    eAttr.addField("Euclidean", 0);
+    eAttr.addField("Angle", 1);
+    eAttr.setKeyable(true);
+
+    interpolate = eAttr.create("interpolation", "int", 0);
+    eAttr.addField("Linear", 0);
+    eAttr.addField("Slow", 1);
+    eAttr.addField("Fast", 2);
+    eAttr.addField("Smooth1", 3);
+    eAttr.addField("Smooth2", 4);
+    eAttr.addField("Curve", 5);
+    eAttr.setKeyable(true);
+
+    kernel = eAttr.create("kernel", "kn", 0);
+    eAttr.addField("Gaussian", 0);
+    eAttr.addField("Linear", 1);
+    // Set the attribute to be hidden and non-keyable because the
+    // evaluation needs to get updated when switching the kernel type.
+    // The automatic update is tied to the control in the attribute
+    // editor. But since the channel box doesn't allow for such a
+    // command execution the attribute is hidden from the channel box
+    // to force the editing through the attribute editor.
+    eAttr.setKeyable(false);
+    eAttr.setHidden(true);
+
+    poseMode = eAttr.create("poseMode", "pmd", 0);
+    eAttr.addField("Rotate/Twist", 0);
+    eAttr.addField("Rotate", 1);
+    eAttr.addField("Twist", 2);
+
+    poseRotateOrder = eAttr.create("controlPoseRotateOrder", "cpro", 0);
+    eAttr.addField("xyz", 0);
+    eAttr.addField("yzx", 1);
+    eAttr.addField("zxy", 2);
+    eAttr.addField("xzy", 3);
+    eAttr.addField("yxz", 4);
+    eAttr.addField("zyx", 5);
+
+    rbfMode = eAttr.create("rbfMode", "rbfm", 0);
+    eAttr.addField("Generic", 0);
+    eAttr.addField("Matrix", 1);
+    eAttr.setKeyable(false);
+    eAttr.setHidden(true);
+
+    twistAxis = eAttr.create("twistAxis", "tax", 0);
+    eAttr.addField("X", 0);
+    eAttr.addField("Y", 1);
+    eAttr.addField("Z", 2);
+    eAttr.setKeyable(false);
+
+    type = eAttr.create("type", "typ", 0);
+    eAttr.addField("Vector Angle", 0);
+    eAttr.addField("RBF", 1);
+    eAttr.setKeyable(true);
+
+    //
+    // MFnNumericAttribute
+    //
+
+    MFnNumericAttribute nAttr;
+
+    active = nAttr.create("active", "ac", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    allowNegative = nAttr.create("allowNegativeWeights", "anw", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    angle = nAttr.create("angle", "an", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.01);
+    nAttr.setMax(180.0);
+    nAttr.setDefault(45.0);
+
+    bias = nAttr.create("bias", "bias", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(0.0);
+    nAttr.setSoftMin(-1.0);
+    nAttr.setSoftMax(1.0);
+
+    centerAngle = nAttr.create("centerAngle", "ca", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setMax(180.0);
+    nAttr.setDefault(0.0);
+
+    colorDriverR = nAttr.create("driverColorR", "dcr", MFnNumericData::kDouble);
+    nAttr.setKeyable(false);
+    nAttr.setMin(0.0);
+    nAttr.setMax(1.0);
+    nAttr.setDefault(0.1);
+
+    colorDriverG = nAttr.create("driverColorG", "dcg", MFnNumericData::kDouble);
+    nAttr.setKeyable(false);
+    nAttr.setMin(0.0);
+    nAttr.setMax(1.0);
+    nAttr.setDefault(0.7);
+
+    colorDriverB = nAttr.create("driverColorB", "dcb", MFnNumericData::kDouble);
+    nAttr.setKeyable(false);
+    nAttr.setMin(0.0);
+    nAttr.setMax(1.0);
+    nAttr.setDefault(0.0);
+
+    colorR = nAttr.create("iconColorR", "icr", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setMax(1.0);
+    nAttr.setDefault(1.0);
+
+    colorG = nAttr.create("iconColorG", "icg", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setMax(1.0);
+    nAttr.setDefault(0.8);
+
+    colorB = nAttr.create("iconColorB", "icb", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setMax(1.0);
+    nAttr.setDefault(0.2);
+
+    drawCenter = nAttr.create("drawCenterCone", "dcc", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(false);
+
+    drawCone = nAttr.create("drawCone", "dc", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    drawDriver = nAttr.create("drawDriver", "dd", MFnNumericData::kBoolean);
+    nAttr.setKeyable(false);
+    nAttr.setHidden(true);
+    nAttr.setDefault(false);
+
+    drawIndices = nAttr.create("drawIndices", "did", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    drawOrigin = nAttr.create("drawOrigin", "dor", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    drawPoses = nAttr.create("drawPoses", "dp", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    drawTwist = nAttr.create("drawTwist", "dt", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(false);
+
+    drawWeight = nAttr.create("drawWeight", "dw", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    driverIndex = nAttr.create("driverIndex", "dvi", MFnNumericData::kInt);
+    nAttr.setKeyable(false);
+    nAttr.setHidden(true);
+    nAttr.setDefault(0);
+
+    evaluate = nAttr.create("evaluate", "e", MFnNumericData::kBoolean);
+    nAttr.setKeyable(false);
+    nAttr.setHidden(true);
+    nAttr.setDefault(false);
+
+    exposeData = nAttr.create("exposeData", "exd", MFnNumericData::kInt);
+    nAttr.setKeyable(true);
+    nAttr.setHidden(true);
+    nAttr.setDefault(0);
+
+    grow = nAttr.create("grow", "gr", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    indexDist = nAttr.create("indexDistance", "idd", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setDefault(0.1);
+
+    input = nAttr.create("input", "i", MFnNumericData::kDouble);
+    nAttr.setWritable(true);
+    nAttr.setKeyable(true);
+    nAttr.setArray(true);
+    nAttr.setUsesArrayDataBuilder(true);
+
+    invert = nAttr.create("invert", "iv", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(false);
+
+    opposite = nAttr.create("opposite", "op", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(false);
+
+    output = nAttr.create("output", "o", MFnNumericData::kDouble);
+    nAttr.setWritable(true);
+    nAttr.setArray(true);
+    nAttr.setUsesArrayDataBuilder(true);
+
+    outWeight = nAttr.create("outWeight", "ow", MFnNumericData::kDouble);
+    nAttr.setWritable(true);
+    nAttr.setKeyable(false);
+    nAttr.setDefault(0.0);
+
+    poseDrawTwist = nAttr.create("poseDrawTwist", "pdt", MFnNumericData::kDouble);
+    nAttr.setWritable(false);
+    nAttr.setStorable(false);
+    nAttr.setHidden(true);
+    nAttr.setArray(true);
+    nAttr.setUsesArrayDataBuilder(true);
+
+    poseDrawVector = nAttr.create("poseDrawVector", "pdv", MFnNumericData::k3Double);
+    nAttr.setWritable(false);
+    nAttr.setStorable(false);
+    nAttr.setHidden(true);
+    nAttr.setArray(true);
+    nAttr.setUsesArrayDataBuilder(true);
+
+    poseInput = nAttr.create("poseInput", "pi", MFnNumericData::kDouble);
+    nAttr.setWritable(true);
+    nAttr.setKeyable(true);
+    nAttr.setArray(true);
+    nAttr.setUsesArrayDataBuilder(true);
+
+    poseLength = nAttr.create("poseLength", "pl", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setDefault(1.0);
+
+    poseValue = nAttr.create("poseValue", "pv", MFnNumericData::kDouble);
+    nAttr.setWritable(true);
+    nAttr.setKeyable(true);
+    nAttr.setArray(true);
+    nAttr.setUsesArrayDataBuilder(true);
+
+    restInput = nAttr.create("restInput", "rin", MFnNumericData::kDouble);
+    nAttr.setWritable(true);
+    nAttr.setKeyable(true);
+    nAttr.setArray(true);
+    nAttr.setUsesArrayDataBuilder(true);
+
+    scale = nAttr.create("scale", "sc", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(1.0);
+
+    size = nAttr.create("iconSize", "is", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setSoftMax(50.0);
+    nAttr.setDefault(1.0);
+
+    translateMax = nAttr.create("translateMax", "tmax", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setDefault(0.0);
+
+    translateMin = nAttr.create("translateMin", "tmin", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.0);
+    nAttr.setDefault(0.0);
+
+    twist = nAttr.create("twist", "tw", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(false);
+
+    twistAngle = nAttr.create("twistAngle", "ta", MFnNumericData::kDouble);
+    nAttr.setKeyable(true);
+    nAttr.setMin(0.01);
+    nAttr.setMax(180.0);
+    nAttr.setDefault(90.0);
+
+    useInterpolation = nAttr.create("useInterpolation", "uint", MFnNumericData::kBoolean);
+    nAttr.setKeyable(false);
+    nAttr.setHidden(true);
+
+    useRotate = nAttr.create("useRotate", "ur", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(true);
+
+    useTranslate = nAttr.create("useTranslate", "ut", MFnNumericData::kBoolean);
+    nAttr.setKeyable(true);
+    nAttr.setDefault(false);
+
+    //
+    // MFnMessageAttribute
+    //
+
+    MFnMessageAttribute msgAttr;
+
+    controlNode = msgAttr.create("controlNode", "cn");
+
+    //
+    // MFnMatrixAttribute
+    //
+
+    MFnMatrixAttribute mAttr;
+
+    driverInput = mAttr.create("driverInput", "di");
+    mAttr.setHidden(true);
+    driverMatrix = mAttr.create("driverMatrix", "dm");
+    mAttr.setHidden(true);
+    poseMatrix = mAttr.create("poseMatrix", "pmat");
+    mAttr.setHidden(true);
+    poseParentMatrix = mAttr.create("poseParentMatrix", "ppmat");
+    mAttr.setHidden(true);
+    readerMatrix = mAttr.create("readerMatrix", "rm");
+    mAttr.setHidden(true);
+
+    //
+    // MFnTypedAttribute
+    //
+
+    MFnTypedAttribute tAttr;
+
+    poseAttributes = tAttr.create("controlPoseAttributes", "cpa", MFnData::kStringArray);
+    poseValues = tAttr.create("controlPoseValues", "cpv", MFnData::kDoubleArray);
+
+    //
+    // MFnCompoundAttribute
+    //
+
+    MFnCompoundAttribute cAttr;
+
+    color = cAttr.create("iconColor", "ic");
+    cAttr.setKeyable(true);
+    cAttr.addChild(colorR);
+    cAttr.addChild(colorG);
+    cAttr.addChild(colorB);
+
+    colorDriver = cAttr.create("driverColor", "dco");
+    cAttr.setKeyable(false);
+    cAttr.setHidden(true);
+    cAttr.addChild(colorDriverR);
+    cAttr.addChild(colorDriverG);
+    cAttr.addChild(colorDriverB);
+
+    pose = cAttr.create("pose", "p");
+    cAttr.setArray(true);
+    cAttr.setUsesArrayDataBuilder(true);
+    cAttr.addChild(poseMatrix);
+    cAttr.addChild(poseParentMatrix);
+    cAttr.addChild(poseMode);
+    cAttr.addChild(poseAttributes);
+    cAttr.addChild(poseValues);
+    cAttr.addChild(poseRotateOrder);
+
+    driverList = cAttr.create("driverList", "dl");
+    cAttr.setHidden(true);
+    cAttr.setArray(true);
+    cAttr.setUsesArrayDataBuilder(true);
+    cAttr.addChild(driverInput);
+    cAttr.addChild(controlNode);
+    cAttr.addChild(pose);
+
+    poses = cAttr.create("poses", "ps");
+    cAttr.setKeyable(true);
+    cAttr.setArray(true);
+    cAttr.setUsesArrayDataBuilder(true);
+    cAttr.addChild(poseInput);
+    cAttr.addChild(poseValue);
+
+    //
+    // MRampAttribute
+    //
+
+    MRampAttribute rAttr;
+
+    curveRamp = rAttr.createCurveRamp("blendCurve", "bc");
+
+    // -----------------------------------------------------------------
+    // add attributes (order matters)
+    // -----------------------------------------------------------------
+
+    addAttribute(active);
+    addAttribute(type);
+    addAttribute(direction);
+    addAttribute(invert);
+    addAttribute(useRotate);
+    addAttribute(angle);
+    addAttribute(centerAngle);
+    addAttribute(twist);
+    addAttribute(twistAngle);
+    addAttribute(useTranslate);
+    addAttribute(grow);
+    addAttribute(translateMin);
+    addAttribute(translateMax);
+    addAttribute(interpolate);
+    addAttribute(curveRamp);
+    addAttribute(size);
+    addAttribute(color);
+    addAttribute(drawCone);
+    addAttribute(drawCenter);
+    addAttribute(drawWeight);
+    addAttribute(outWeight);
+    addAttribute(readerMatrix);
+    addAttribute(driverMatrix);
+    addAttribute(driverList);
+    addAttribute(driverInput);
+    addAttribute(pose);
+    addAttribute(poseMatrix);
+    addAttribute(poseParentMatrix);
+    addAttribute(input);
+    addAttribute(restInput);
+    addAttribute(poses);
+    addAttribute(poseInput);
+    addAttribute(poseValue);
+    addAttribute(output);
+    addAttribute(poseMode);
+    addAttribute(twistAxis);
+    addAttribute(opposite);
+    addAttribute(poseAttributes);
+    addAttribute(poseValues);
+    addAttribute(poseRotateOrder);
+    addAttribute(rbfMode);
+    addAttribute(evaluate);
+    addAttribute(kernel);
+    addAttribute(bias);
+    addAttribute(useInterpolation);
+    addAttribute(allowNegative);
+    addAttribute(scale);
+    addAttribute(distanceType);
+    addAttribute(drawOrigin);
+    addAttribute(drawDriver);
+    addAttribute(drawPoses);
+    addAttribute(drawIndices);
+    addAttribute(drawTwist);
+    addAttribute(poseLength);
+    addAttribute(indexDist);
+    addAttribute(driverIndex);
+    addAttribute(colorDriver);
+    addAttribute(controlNode);
+    addAttribute(poseDrawVector);
+    addAttribute(poseDrawTwist);
+    addAttribute(exposeData);
+
+    // -----------------------------------------------------------------
+    // affects
+    // -----------------------------------------------------------------
+
+    attributeAffects(weightDriver::active, weightDriver::output);
+    attributeAffects(weightDriver::allowNegative, weightDriver::output);
+    attributeAffects(weightDriver::angle, weightDriver::output);
+    attributeAffects(weightDriver::bias, weightDriver::output);
+    attributeAffects(weightDriver::centerAngle, weightDriver::output);
+    attributeAffects(weightDriver::curveRamp, weightDriver::output);
+    attributeAffects(weightDriver::direction, weightDriver::output);
+    attributeAffects(weightDriver::distanceType, weightDriver::output);
+    attributeAffects(weightDriver::driverIndex, weightDriver::output);
+    attributeAffects(weightDriver::driverInput, weightDriver::output);
+    attributeAffects(weightDriver::driverMatrix, weightDriver::output);
+    attributeAffects(weightDriver::evaluate, weightDriver::output);
+    attributeAffects(weightDriver::grow, weightDriver::output);
+    attributeAffects(weightDriver::input, weightDriver::output);
+    attributeAffects(weightDriver::interpolate, weightDriver::output);
+    attributeAffects(weightDriver::invert, weightDriver::output);
+    attributeAffects(weightDriver::kernel, weightDriver::output);
+    attributeAffects(weightDriver::opposite, weightDriver::output);
+    attributeAffects(weightDriver::poseInput, weightDriver::output);
+    attributeAffects(weightDriver::poseMatrix, weightDriver::output);
+    attributeAffects(weightDriver::poseMode, weightDriver::output);
+    attributeAffects(weightDriver::poseParentMatrix, weightDriver::output);
+    attributeAffects(weightDriver::poseValue, weightDriver::output);
+    attributeAffects(weightDriver::scale, weightDriver::output);
+    attributeAffects(weightDriver::rbfMode, weightDriver::output);
+    attributeAffects(weightDriver::readerMatrix, weightDriver::output);
+    attributeAffects(weightDriver::restInput, weightDriver::output);
+    attributeAffects(weightDriver::translateMax, weightDriver::output);
+    attributeAffects(weightDriver::translateMin, weightDriver::output);
+    attributeAffects(weightDriver::twist, weightDriver::output);
+    attributeAffects(weightDriver::twistAngle, weightDriver::output);
+    attributeAffects(weightDriver::twistAxis, weightDriver::output);
+    attributeAffects(weightDriver::type, weightDriver::output);
+    attributeAffects(weightDriver::useInterpolation, weightDriver::output);
+    attributeAffects(weightDriver::useRotate, weightDriver::output);
+    attributeAffects(weightDriver::useTranslate, weightDriver::output);
+
+    // -----------------------------------------------------------------
+    // affects also the legacy outWeight plug
+    // (to not break compatibility)
+    // -----------------------------------------------------------------
+    attributeAffects(weightDriver::active, weightDriver::outWeight);
+    attributeAffects(weightDriver::angle, weightDriver::outWeight);
+    attributeAffects(weightDriver::centerAngle, weightDriver::outWeight);
+    attributeAffects(weightDriver::curveRamp, weightDriver::outWeight);
+    attributeAffects(weightDriver::direction, weightDriver::outWeight);
+    attributeAffects(weightDriver::driverMatrix, weightDriver::outWeight);
+    attributeAffects(weightDriver::interpolate, weightDriver::outWeight);
+    attributeAffects(weightDriver::invert, weightDriver::outWeight);
+    attributeAffects(weightDriver::grow, weightDriver::outWeight);
+    attributeAffects(weightDriver::readerMatrix, weightDriver::outWeight);
+    attributeAffects(weightDriver::translateMax, weightDriver::outWeight);
+    attributeAffects(weightDriver::translateMin, weightDriver::outWeight);
+    attributeAffects(weightDriver::twist, weightDriver::outWeight);
+    attributeAffects(weightDriver::twistAngle, weightDriver::outWeight);
+    attributeAffects(weightDriver::type, weightDriver::outWeight);
+    attributeAffects(weightDriver::useRotate, weightDriver::outWeight);
+    attributeAffects(weightDriver::useTranslate, weightDriver::outWeight);
+
+    return MStatus::kSuccess;
+}
+
 //
-// Viewport 2.0
+// Description:
+//      Calculate the twist angle based on the given rotate order.
 //
-// ---------------------------------------------------------------------
+// Input Arguments:
+//      q               The quaternion to get the twist angle from.
+//      axis            The twist axis.
+//
+// Return Value:
+//      double          The twist angle.
+//
+double weightDriver::getTwistAngle(MQuaternion q, unsigned int axis)
+{
+    double axisComponent = q.x;
+    if (axis == 1)
+        axisComponent = q.y;
+    else if (axis == 2)
+        axisComponent = q.z;
+    return 2.0 * atan2(axisComponent, q.w);
+}
+
+
+//
+// Description:
+//      Build a matrix containing the distance values between all poses.
+//      Based on all distances also calculate the general mean distance
+//      which is needed for the RBF calculation.
+//
+// Input Arguments:
+//      poseMat         The matrix containing all poses.
+//      meanDist        The average distance between the poses.
+//      distType        The distance type (linear/angle).
+//
+// Return Value:
+//      BRMatrix        The twist angle.
+//
+BRMatrix weightDriver::getDistances(BRMatrix poseMat, double& meanDist, int distType)
+{
+    unsigned count = poseMat.getRowSize();
+
+    unsigned int i, j;
+
+    BRMatrix distMat;
+    distMat.setSize(count, count);
+
+    double sum = 0.0;
+
+    for (i = 0; i < count; i++)
+    {
+        for (j = 0; j < count; j++)
+        {
+            double dist = getPoseDelta(poseMat.getRowVector(i), poseMat.getRowVector(j), distType);
+            distMat(i, j) = dist;
+            sum += dist;
+        }
+    }
+
+    meanDist = sum / (count * count);
+
+    return distMat;
+}
+
+
+//
+// Description:
+//      Return the distance between the two given vectors based on the
+//      distance type (linear/angle) or the vector components in case
+//      of the generic RBF mode.
+//
+// Input Arguments:
+//      vec1            The first vector.
+//      vec2            The second vector.
+//      distType        The distance type (linear/angle).
+//
+// Return Value:
+//      double          The distance value.
+//
+double weightDriver::getPoseDelta(std::vector<double> vec1, std::vector<double> vec2, int distType)
+{
+    double dist = 0.0;
+    if (distType == 0)
+        dist = getRadius(vec1, vec2);
+    else
+    {
+        if (vec1.size() == 3 && vec2.size() == 3)
+            dist = getAngle(vec1, vec2);
+        else
+            dist = getRadius(vec1, vec2);
+    }
+    return dist;
+}
+
+
+//
+// Description:
+//      Calculate the linear distance between two vectors.
+//
+// Input Arguments:
+//      vec1            The first vector.
+//      vec2            The second vector.
+//
+// Return Value:
+//      double          The linear distance.
+//
+double weightDriver::getRadius(std::vector<double> vec1, std::vector<double> vec2)
+{
+    size_t count = vec1.size();
+
+    double sum = 0.0;
+    for (unsigned i = 0; i < count; i++)
+        sum += pow(vec1[i] - vec2[i], 2);
+    return sqrt(sum);
+}
+
+
+//
+// Description:
+//      Calculate the angle between two vectors.
+//
+// Input Arguments:
+//      vec1            The first vector.
+//      vec2            The second vector.
+//
+// Return Value:
+//      double          The angle value.
+//
+double weightDriver::getAngle(std::vector<double> vec1, std::vector<double> vec2)
+{
+    MVector v1(vec1[0], vec1[1], vec1[2]);
+    MVector v2(vec2[0], vec2[1], vec2[2]);
+    return v1.angle(v2);
+}
+
+
+//
+// Description:
+//      Calculate the RBF activation values.
+//
+// Input Arguments:
+//      mat             The matrix with the activation values.
+//      width           The activation width.
+//      kernelType      The interpolation function.
+//
+// Return Value:
+//      None
+//
+void weightDriver::getActivations(BRMatrix& mat, double width, short kernelType)
+{
+    unsigned count = mat.getRowSize();
+
+    unsigned int i, j;
+
+    for (i = 0; i < count; i++)
+    {
+        for (j = 0; j < count; j++)
+            mat(i, j) = interpolateRbf(mat(i, j), width, kernelType);
+    }
+}
+
+
+//
+// Description:
+//      Interpolation function for processing the weight values.
+//
+// Input Arguments:
+//      value           The value to interpolate.
+//      width           The activation width.
+//      kernelType      The interpolation function.
+//
+// Return Value:
+//      double          The new interpolated value.
+//
+double weightDriver::interpolateRbf(double value, double width, short kernelType)
+{
+    double result = 0.0;
+
+    // gaussian
+    if (kernelType == 0)
+    {
+        if (width == 0.0)
+            width = 1.0;
+        width = 1.0 / width;
+        double sigma = -(width * width);
+        result = exp(sigma * value);
+    }
+    // linear
+    else if (kernelType == 1)
+    {
+        result = value;
+    }
+
+    return result;
+}
+
+
+//
+// Description:
+//      Calculate the individual output weights based on the current
+//      driver values in relation to the stored poses. This is the main
+//      part of the RBF calculation but a rather simple process as it
+//      just gets the distances of the driver to the stored poses and
+//      calculates the weighted output values based on the weight matrix
+//      built during initialization.
+//
+// Input Arguments:
+//      out             The array of output weight values.
+//      poses           The matrix containing all poses.
+//      driver          The array of driver values.
+//      poseModes       The array containing the the mode per pose.
+//      weightMat       The matrix with the RBF weights.
+//      avgDist         The average distance between the poses.
+//      distType        The distance type (linear/angle).
+//      kernelType      The interpolation function.
+//
+// Return Value:
+//      None
+//
+void weightDriver::getPoseWeights(MDoubleArray& out,
+    BRMatrix poses,
+    std::vector<double> driver,
+    MIntArray poseModes,
+    BRMatrix weightMat,
+    double avgDist,
+    int distType,
+    short kernelType)
+{
+    unsigned int poseCount = poses.getRowSize();
+    unsigned int valueCount = out.length();
+
+    // Make sure that the weight matrix has the correct dimensions.
+    // This has become necessary with introducing multiple drivers in
+    // matrix mode.
+    if (weightMat.getRowSize() != poseCount || weightMat.getColSize() != valueCount)
+        return;
+
+    unsigned int i, j;
+
+    for (i = 0; i < poseCount; i++)
+    {
+        double dist = 0.0;
+        std::vector<double> dv = driver;
+        std::vector<double> ps = poses.getRowVector(i);
+
+        if (poseModes[i] == 1)
+            dv[3] = 0.0;
+        else if (poseModes[i] == 2)
+        {
+            dv[0] = 0.0;
+            dv[1] = 0.0;
+            dv[2] = 0.0;
+        }
+
+        dist = getPoseDelta(dv, ps, distType);
+
+        for (j = 0; j < valueCount; j++)
+            out[j] += weightMat(i, j) * interpolateRbf(dist, avgDist, kernelType);
+    }
+}
+
+#pragma endregion
+
+
+#pragma region weightDriverOverride
 #if MAYA_API_VERSION >= 201400
 
 MString weightDriver::drawDbClassification("drawdb/geometry/weightDriver");
 MString weightDriver::drawRegistrantId("weightDriverNodePlugin");
 
-// VP2.0 API for Maya 2016.5 and later.
-//
-// The overrides for Maya 2016.5 and later are different than for
-// earlier versions of Maya.
+
 #if MAYA_API_VERSION >= 201650
 
 // By setting isAlwaysDirty to false in MPxDrawOverride constructor, the
@@ -3265,6 +3259,8 @@ void weightDriverOverride::draw(const MHWRender::MDrawContext &context, const MU
 {
 }
 #endif
+
+#pragma endregion
 
 // ---------------------------------------------------------------------
 // MIT License

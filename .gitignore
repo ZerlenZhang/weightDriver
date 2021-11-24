@@ -11,3 +11,13 @@
 
 *.pdb
 *.exp
+*.tlog
+*.iobj
+*.ipdb
+*.log
+*.obj
+build/weightDriver/x64/Release/weightDriver.tlog
+*.iobj
+*.ipdb
+*.log
+*.obj
